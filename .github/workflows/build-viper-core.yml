@@ -1,0 +1,40 @@
+name: Build Viper Core Backend
+
+on:
+  push:
+    paths:
+      - 'viper-core/**'
+      - '.github/workflows/build-viper-core.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Validate Python files
+        shell: pwsh
+        run: |
+          python -m compileall -q viper-core/viper_backend
+
+      - name: Package backend
+        shell: pwsh
+        run: |
+          Compress-Archive -Path viper-core/* -DestinationPath Viper-Core-Backend.zip -Force
+
+      - name: Upload Viper Core
+        uses: actions/upload-artifact@v4
+        with:
+          name: Viper-Core-Backend
+          path: Viper-Core-Backend.zip
+          if-no-files-found: error
