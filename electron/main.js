@@ -3,14 +3,38 @@ import {spawn} from 'node:child_process';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import Store from 'electron-store';
-const __dirname=path.dirname(fileURLToPath(import.meta.url)); const dev=process.env.VIPER_DEV==='1'; let win=null,tray=null;
-const store=new Store({name:'viper-settings',defaults:{orbPosition:{x:null,y:null},orbSize:110,orbOpacity:1,glowIntensity:1,animationIntensity:1,alwaysOnTop:true,launchAtStartup:false,wakeWordEnabled:true,voiceEnabled:true,showStatusText:true,theme:'cyan'}});
-function createWindow(){const p=store.get('orbPosition');const d=screen.getPrimaryDisplay().workArea;const s=320;win=new BrowserWindow({width:s,height:s,x:p?.x??d.width-s-40,y:p?.y??d.height-s-40,frame:false,transparent:true,hasShadow:false,resizable:false,fullscreenable:false,skipTaskbar:true,alwaysOnTop:true,focusable:false,backgroundColor:'#00000000',webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false}});win.setAlwaysOnTop(store.get('alwaysOnTop'),'screen-saver');win.setVisibleOnAllWorkspaces(true,{visibleOnFullScreen:true});dev?win.loadURL('http://localhost:5173'):win.loadFile(path.join(__dirname,'../dist/index.html'));win.on('move',()=>{const [x,y]=win.getPosition();store.set('orbPosition',{x,y})});win.on('closed',()=>win=null)}
-function trayMenu(){if(!tray)return;tray.setContextMenu(Menu.buildFromTemplate([{label:'Viper',enabled:false},{type:'separator'},{label:'Wake Word',type:'checkbox',checked:store.get('wakeWordEnabled'),click:i=>{store.set('wakeWordEnabled',i.checked);win?.webContents.send('settings:changed',{wakeWordEnabled:i.checked})}},{label:'Voice',type:'checkbox',checked:store.get('voiceEnabled'),click:i=>{store.set('voiceEnabled',i.checked);win?.webContents.send('settings:changed',{voiceEnabled:i.checked})}},{label:'Always on Top',type:'checkbox',checked:store.get('alwaysOnTop'),click:i=>{store.set('alwaysOnTop',i.checked);win?.setAlwaysOnTop(i.checked,'screen-saver')}},{label:'Launch at Startup',type:'checkbox',checked:store.get('launchAtStartup'),click:i=>{store.set('launchAtStartup',i.checked);app.setLoginItemSettings({openAtLogin:i.checked})}},{type:'separator'},{label:'Show Viper',click:()=>win?.show()},{label:'Quit Viper',click:()=>app.quit()}]))}
-function createTray(){tray=new Tray(nativeImage.createEmpty());tray.setToolTip('Viper — Personal Intelligence System');trayMenu()}
+const __dirname=path.dirname(fileURLToPath(import.meta.url));
+const dev=process.env.VIPER_DEV==='1';
+let win=null,tray=null,settingsWin=null;
+const store=new Store({name:'viper-settings',defaults:{orbPosition:{x:null,y:null},orbSize:110,orbOpacity:1,glowIntensity:1,animationIntensity:1,alwaysOnTop:true,launchAtStartup:false,wakeWordEnabled:true,voiceEnabled:true,showStatusText:true,theme:'cyan',openaiApiKey:''}});
+function createWindow(){
+ const p=store.get('orbPosition'); const d=screen.getPrimaryDisplay().workArea; const s=320;
+ win=new BrowserWindow({width:s,height:s,x:p?.x??d.x+d.width-s-40,y:p?.y??d.y+d.height-s-40,frame:false,transparent:true,hasShadow:false,resizable:false,fullscreenable:false,skipTaskbar:true,alwaysOnTop:true,focusable:true,backgroundColor:'#00000000',webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false}});
+ win.setAlwaysOnTop(store.get('alwaysOnTop'),'screen-saver'); win.setVisibleOnAllWorkspaces(true,{visibleOnFullScreen:true});
+ dev?win.loadURL('http://localhost:5173'):win.loadFile(path.join(__dirname,'../dist/index.html'));
+ win.on('move',()=>{const [x,y]=win.getPosition();store.set('orbPosition',{x,y})}); win.on('closed',()=>win=null);
+}
+function createSettingsWindow(){
+ if(settingsWin&&!settingsWin.isDestroyed()){settingsWin.show();settingsWin.focus();return;}
+ settingsWin=new BrowserWindow({width:520,height:650,minWidth:480,minHeight:600,title:'Viper Settings',autoHideMenuBar:true,backgroundColor:'#071014',webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false}});
+ dev?settingsWin.loadURL('http://localhost:5173?settings=1'):settingsWin.loadFile(path.join(__dirname,'../dist/index.html'),{search:'?settings=1'});
+ settingsWin.on('closed',()=>settingsWin=null);
+}
+function trayMenu(){if(!tray)return;tray.setContextMenu(Menu.buildFromTemplate([
+ {label:'Viper',enabled:false},{type:'separator'},
+ {label:'Settings',click:createSettingsWindow},
+ {label:'Wake Word',type:'checkbox',checked:store.get('wakeWordEnabled'),click:i=>{store.set('wakeWordEnabled',i.checked);win?.webContents.send('settings:changed',{wakeWordEnabled:i.checked})}},
+ {label:'Voice',type:'checkbox',checked:store.get('voiceEnabled'),click:i=>{store.set('voiceEnabled',i.checked);win?.webContents.send('settings:changed',{voiceEnabled:i.checked})}},
+ {label:'Always on Top',type:'checkbox',checked:store.get('alwaysOnTop'),click:i=>{store.set('alwaysOnTop',i.checked);win?.setAlwaysOnTop(i.checked,'screen-saver')}},
+ {label:'Launch at Startup',type:'checkbox',checked:store.get('launchAtStartup'),click:i=>{store.set('launchAtStartup',i.checked);app.setLoginItemSettings({openAtLogin:i.checked})}},
+ {type:'separator'},{label:'Show Viper',click:()=>win?.show()},{label:'Quit Viper',click:()=>app.quit()}]));}
+function createTray(){tray=new Tray(nativeImage.createEmpty());tray.setToolTip('Viper — Personal Intelligence System');trayMenu();tray.on('double-click',createSettingsWindow)}
 const apps={chrome:'chrome.exe',edge:'msedge.exe',discord:'Discord.exe',spotify:'Spotify.exe',notepad:'notepad.exe',calculator:'calc.exe',vscode:'Code.exe'};
 ipcMain.handle('viper:getSettings',()=>store.store);
 ipcMain.handle('viper:setSetting',(_,k,v)=>{store.set(k,v);if(k==='alwaysOnTop')win?.setAlwaysOnTop(!!v,'screen-saver');trayMenu();return true});
+ipcMain.handle('viper:openSettings',()=>{createSettingsWindow();return true});
 ipcMain.handle('viper:executeFastCommand',(_,intent,entity)=>{if(intent==='open_app'&&apps[entity]){spawn(apps[entity],[],{detached:true,stdio:'ignore',windowsHide:true}).unref();return true}if(intent==='open_url'){shell.openExternal(entity);return true}if(intent==='open_folder'){const folder=entity==='downloads'?app.getPath('downloads'):app.getPath('documents');spawn('explorer.exe',[folder],{windowsHide:true});return true}if(intent==='lock_pc'){spawn('rundll32.exe',['user32.dll,LockWorkStation'],{windowsHide:true});return true}throw new Error('Unsupported fast command')});
+ipcMain.handle('viper:aiCommand',async(_,text)=>{const key=store.get('openaiApiKey')||process.env.OPENAI_API_KEY;if(!key)throw new Error('OpenAI API key is not configured. Open Viper Settings to add it.');const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model:'gpt-5.6-luna',input:[{role:'system',content:[{type:'input_text',text:'You are Viper, a concise Windows desktop voice assistant. Address the user as Mr. David when natural. Give direct, useful answers. Do not claim to have performed computer actions unless the local command router actually did them.'}]},{role:'user',content:[{type:'input_text',text}]}]})});if(!r.ok)throw new Error(`OpenAI request failed (${r.status})`);const data=await r.json();return data.output_text||'I am ready, Mr. David.'});
+ipcMain.handle('viper:tts',async(_,text)=>{const key=store.get('openaiApiKey')||process.env.OPENAI_API_KEY;if(!key)throw new Error('OpenAI API key is not configured.');const r=await fetch('https://api.openai.com/v1/audio/speech',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model:'gpt-4o-mini-tts',voice:'onyx',input:text,instructions:'Speak naturally, calmly, confidently and intelligently. Address the user as Mr. David when appropriate.'})});if(!r.ok)throw new Error(`OpenAI TTS failed (${r.status})`);const b=Buffer.from(await r.arrayBuffer());return `data:audio/mpeg;base64,${b.toString('base64')}`});
 ipcMain.handle('viper:minimizeToTray',()=>{win?.hide();return true});ipcMain.handle('viper:show',()=>{win?.show();return true});ipcMain.handle('viper:hide',()=>{win?.hide();return true});ipcMain.handle('viper:quit',()=>{app.quit();return true});
 app.whenReady().then(()=>{createWindow();createTray();if(store.get('launchAtStartup'))app.setLoginItemSettings({openAtLogin:true})});app.on('window-all-closed',()=>{});
