@@ -16,8 +16,8 @@ export const viperBackend = {
     try {
       if (!window.viperNative?.executeFastCommand) throw new Error('Native Viper command bridge is unavailable');
       const execution = window.viperNative.executeFastCommand(c.intent, c.entity);
-      execution.then(()=>viperEventBus.emit('FAST_COMMAND_COMPLETED',c)).catch(error=>viperEventBus.emit('ERROR',{error}));
-      return { path: 'local', command: c } as const;
+      execution.then(() => viperEventBus.emit('FAST_COMMAND_COMPLETED', c)).catch(error => viperEventBus.emit('ERROR', { error }));
+      return { path: 'local', command: c, execution } as const;
     } catch (error) {
       viperEventBus.emit('ERROR', { error });
       return { path: 'error', error } as const;
