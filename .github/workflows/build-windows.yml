@@ -22,10 +22,19 @@ jobs:
         run: npm install
       - name: Type check
         run: npx tsc --noEmit
-      - name: Build and package Viper
-        run: npm run package:win
+      - name: Build renderer
+        run: npm run build
+      - name: Package Viper
+        run: npx electron-builder --win --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Verify installer exists
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path dist -Filter '*.exe' | Select-Object -First 1
+          if (-not $installer) { throw 'No Windows installer was produced.' }
+          Write-Host "Installer: $($installer.FullName)"
+          Write-Host "Size: $([math]::Round($installer.Length / 1MB, 2)) MB"
       - name: Upload Viper installer
         uses: actions/upload-artifact@v4
         with:
