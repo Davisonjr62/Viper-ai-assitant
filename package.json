@@ -1,7 +1,7 @@
 {
   "name": "viper",
   "productName": "Viper",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Viper — a voice-first, floating holographic AI desktop assistant.",
   "author": "David Monday Nwankwo",
   "private": true,
