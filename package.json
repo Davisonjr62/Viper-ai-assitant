@@ -1,7 +1,7 @@
 {
   "name": "viper",
   "productName": "Viper",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Viper — a voice-first, floating holographic AI desktop assistant.",
   "author": "David Monday Nwankwo",
   "private": true,
@@ -30,7 +30,7 @@
     "electron-builder": "^26.16.1",
     "typescript": "^5.5.3",
     "vite": "^5.3.4",
-    "wait-on": "^7.2.0"
+    "wait-on": "^7.0.0"
   },
   "build": {
     "appId": "com.davidnwankwo.viper",
