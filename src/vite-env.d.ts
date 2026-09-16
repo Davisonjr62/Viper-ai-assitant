@@ -1,0 +1,2 @@
+/// <reference types="vite/client" />
+declare global{interface Window{viperNative?:{isElectron?:boolean;getSettings:()=>Promise<any>;setSetting:(k:string,v:unknown)=>Promise<boolean>;minimizeToTray:()=>Promise<boolean>;show:()=>Promise<boolean>;hide:()=>Promise<boolean>;quit:()=>Promise<boolean>;executeFastCommand:(i:string,e?:string)=>Promise<boolean>;onSettingsChanged:(cb:(p:any)=>void)=>()=>void}}}export{};
