@@ -1,0 +1,1 @@
+import{useEffect,useState}from'react';type C='mic'|'speaker';const channels={mic:0,speaker:0};export function useAudioLevel(c:C,simulate:boolean){const[l,setL]=useState(0);useEffect(()=>{if(!simulate)return;const id=window.setInterval(()=>{channels[c]=.15+Math.random()*.75;setL(channels[c])},60);return()=>window.clearInterval(id)},[c,simulate]);return l}
