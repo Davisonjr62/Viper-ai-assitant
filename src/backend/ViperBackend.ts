@@ -1,1 +1,28 @@
-import{viperEventBus}from'../core/ViperEventBus';import{classifyLocalCommand}from'./LocalCommandRouter';export const viperBackend={connect(){},disconnect(){},async handleCommand(text:string){viperEventBus.emit('COMMAND_RECEIVED',{text});const c=classifyLocalCommand(text);viperEventBus.emit('COMMAND_CLASSIFIED',c);if(!c.handled){viperEventBus.emit('AI_TASK_STARTED',{text});return{path:'ai',command:c}}viperEventBus.emit('FAST_COMMAND_STARTED',c);try{await window.viperNative?.executeFastCommand(c.intent,c.entity);viperEventBus.emit('FAST_COMMAND_COMPLETED',c);return{path:'local',command:c}}catch(error){viperEventBus.emit('ERROR',{error});return{path:'error',error}}}};
+import { viperEventBus } from '../core/ViperEventBus';
+import { classifyLocalCommand } from './LocalCommandRouter';
+
+export const viperBackend = {
+  connect() {},
+  disconnect() {},
+  async handleCommand(text: string) {
+    viperEventBus.emit('COMMAND_RECEIVED', { text });
+    const c = classifyLocalCommand(text);
+    viperEventBus.emit('COMMAND_CLASSIFIED', c);
+    if (!c.handled) {
+      viperEventBus.emit('AI_TASK_STARTED', { text });
+      return { path: 'ai', command: c };
+    }
+    viperEventBus.emit('FAST_COMMAND_STARTED', c);
+    try {
+      if (!window.viperNative?.executeFastCommand) {
+        throw new Error('Native Viper command bridge is unavailable');
+      }
+      await window.viperNative.executeFastCommand(c.intent, c.entity);
+      viperEventBus.emit('FAST_COMMAND_COMPLETED', c);
+      return { path: 'local', command: c };
+    } catch (error) {
+      viperEventBus.emit('ERROR', { error });
+      return { path: 'error', error };
+    }
+  },
+};
